@@ -1,0 +1,27 @@
+{
+    "telemetry.enableTelemetry": false,
+    "pylint.args": [
+        "--rcfile=pyproject.toml"
+    ],
+    "black-formatter.args": [
+        "--config=pyproject.toml"
+    ],
+    "flake8.args": [
+        "--toml-config=pyproject.toml"
+    ],
+    "isort.args": [
+        "--settings-path=pyproject.toml"
+    ],
+    "[python]": {
+        "editor.defaultFormatter": "ms-python.black-formatter"
+    },
+    "python.formatting.provider": "none",
+    "python.linting.enabled": true,
+    "python.linting.flake8Enabled": true,
+    "python.analysis.enablePytestSupport": true,
+    "python.analysis.typeCheckingMode": "basic",
+    "python.analysis.diagnosticMode": "workspace",
+    "python.analysis.include": [
+        "**/*.py",
+    ],
+}
