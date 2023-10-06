@@ -9,8 +9,6 @@ from typing import (
     TypeVar,
 )
 
-from typing_extensions import dataclass_transform
-
 from unicore.utils.dataset import Dataset
 from unicore.utils.frozendict import frozendict
 
@@ -20,8 +18,8 @@ InfoFunc: TypeAlias = Callable[[], dict[str, InfoBasic | Sequence[InfoBasic]]]
 Info: TypeAlias = InfoFunc | dict[str, InfoBasic]
 KeyLike: TypeAlias = type | str | Callable[..., Any]
 
-_D = TypeVar("_D", bound=Iterable[Any])
-_D_co = TypeVar("_D_co", bound=Iterable[Any], covariant=True)
+_D = TypeVar("_D", bound=Dataset)
+_D_co = TypeVar("_D_co", bound=Dataset, covariant=True)
 
 def fork() -> Self: ...
 def register_dataset(id: str | None = None) -> Callable[[type[_D]], type[_D]]: ...
