@@ -7,6 +7,7 @@ from __future__ import annotations
 import functools
 import os
 import typing
+import warnings
 from pathlib import Path as _PathlibPath
 
 from iopath.common.file_io import (
@@ -38,9 +39,12 @@ class EnvPathHandler(PathHandler):
     """
 
     def __init__(self, prefix: str, env: str, default: str | None = None):
-        value = os.environ.get(env, default)
-        if value is None or len(value) == 0:
-            raise ValueError(f"Environment variable {env} not defined!")
+        value = os.getenv(env)
+        if value is None or len(value) == 0 or value[0] == "-":
+            if default is None:
+                raise ValueError(f"Environment variable {env} not defined!")
+            warnings.warn(f"Environment variable {env} not defined, using default {default!r}.", stacklevel=2)
+            value = default
 
         self.PREFIX: typing.Final = prefix
         self.LOCAL: typing.Final = value
