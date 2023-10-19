@@ -31,11 +31,11 @@ _STR_TO_KEY = re.compile(r"(?<=[a-z])(?=[A-Z])|[^a-zA-Z]")
 
 class _DataManagerBase(T.Generic[_D_co]):
     @staticmethod
-    def _infer_id(other: KeyLike) -> str:
+    def canonicalize_id(other: KeyLike) -> str:
         if isinstance(other, types.LambdaType):
             raise ValueError("Cannot infer ID from lambda function")
 
-        name = other if isinstance(other, str) else other.__name__
+        name = other if isinstance(other, str) else other.__name__.replace("Dataset", "")
 
         def _to_snake_case(s: str) -> str:
             return "".join(_STR_TO_KEY.sub(" ", s).strip().replace(" ", "_").lower())
@@ -104,7 +104,7 @@ class DataManager(_DataManagerBase[Dataset]):
         """
 
         def wrapped(ds: type[Dataset]) -> type[Dataset]:
-            key = id or self._infer_id(ds)
+            key = id or self.canonicalize_id(ds)
             if key in self.list_datasets():
                 raise KeyError(f"Already registered: {key}")
             if key in self.list_info():
@@ -129,7 +129,7 @@ class DataManager(_DataManagerBase[Dataset]):
         """
         Return the dataset class for the given dataset ID.
         """
-        key = self._infer_id(id)
+        key = self.canonicalize_id(id)
         return self._get_data(key)
 
     def list_datasets(self) -> frozenset[str]:
@@ -169,7 +169,7 @@ class DataManager(_DataManagerBase[Dataset]):
         """
         Return the info for the given dataset ID.
         """
-        key = self._infer_id(id)
+        key = self.canonicalize_id(id)
         return self._get_info(key)()
 
     def list_info(self) -> frozenset[str]:
