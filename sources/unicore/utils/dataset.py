@@ -3,7 +3,7 @@ Implements a framework for working with datasets that have varying layouts and d
 """
 
 from __future__ import annotations
-
+import random
 import abc
 import dataclasses
 import functools
@@ -353,6 +353,13 @@ class _Datapipe(torch.utils.data.Dataset[tuple[str, _T_DITEM]], T.Generic[_T_DIT
         self._queue = queue
         self._load_fn = load_fn
         self._info = info
+    
+    def sample(self, k: int) -> T.Iterator[_T_DITEM]:
+        rng = list(range(len(self)))
+        idx = random.sample(rng, k)
+    
+        for i in idx:
+            yield self[i]
 
     @override
     def __getitem__(self, key_or_idx: str | int) -> tuple[_T_DITEM]:
