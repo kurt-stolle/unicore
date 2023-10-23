@@ -3,11 +3,12 @@ Implements a framework for working with datasets that have varying layouts and d
 """
 
 from __future__ import annotations
-import random
+
 import abc
 import dataclasses
 import functools
 import pickle
+import random
 import types
 import typing as T
 import warnings
@@ -353,11 +354,11 @@ class _Datapipe(torch.utils.data.Dataset[tuple[str, _T_DITEM]], T.Generic[_T_DIT
         self._queue = queue
         self._load_fn = load_fn
         self._info = info
-    
+
     def sample(self, k: int) -> T.Iterator[_T_DITEM]:
         rng = list(range(len(self)))
         idx = random.sample(rng, k)
-    
+
         for i in idx:
             yield self[i]
 

@@ -10,6 +10,7 @@ from __future__ import annotations
 import types
 import typing as T
 
+import torch.utils._pytree as pytree
 from tensordict import TensorDict, TensorDictBase, tensorclass
 from typing_extensions import override
 
@@ -50,6 +51,37 @@ class Tensorclass(metaclass=TensorclassMeta):
 
     def __post_init__(self):
         pass
+
+    def _flatten(self) -> T.Tuple[T.List[T.Any], pytree.Context]:
+        values = []
+        values += list(self._tensordict.values())  # type: ignore
+        values += list(self._non_tensordict.values())  # type: ignore
+
+        keys = []
+        keys += list(self._tensordict.keys())
+        keys += list(self._non_tensordict.keys())
+
+        context = {
+            "keys": keys,
+            "batch_size": self.batch_size,
+            # "names": self.names,
+        }
+
+        return values, context
+
+    @classmethod
+    def _unflatten(cls, values: T.List[T.Any], context: pytree.Context) -> T.Self:
+        obj = cls(
+            **dict(zip(context["keys"], values)),
+            batch_size=context["batch_size"],
+            # names=context["names"],
+        )
+        return obj
+
+    def __init_subclass__(cls, **kwargs) -> None:
+        super().__init_subclass__(**kwargs)
+
+        pytree._register_pytree_node(cls, cls._flatten, cls._unflatten)
 
 
 # def _tensorclass_flatten(obj: Tensorclass) -> T.Tuple[T.List[T.Any], pytree.Context]:
