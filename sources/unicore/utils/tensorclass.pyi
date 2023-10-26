@@ -16,10 +16,11 @@ _CompatibleType: T.TypeAlias = torch.Tensor
 TensorDict = tensordict.TensorDict
 TensorDictBase = tensordict.TensorDictBase
 
-@T.dataclass_transform()
+# @T.dataclass_transform()
 class TensorclassMeta(type):
     pass
 
+@T.dataclass_transform()
 class Tensorclass(metaclass=TensorclassMeta):
     _: KW_ONLY
     batch_size: torch.Size | T.Sequence[int]
