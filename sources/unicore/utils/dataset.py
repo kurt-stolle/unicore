@@ -109,7 +109,7 @@ class Dataset(T.Generic[_T_MFST, _T_QITEM, _T_DITEM, _T_DINFO], metaclass=Datase
     a specific sub-dataset by switching the parent argument.
     """
 
-    _info_fn: T.ClassVar[T.Callable[[], T.Hashable]] | None
+    _info_fn: T.ClassVar[T.Callable[[], T.Hashable] | None]
 
     def __new__(cls, **kwargs):
         """

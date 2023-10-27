@@ -21,11 +21,7 @@ class TensorclassMeta(type):
     pass
 
 @T.dataclass_transform()
-class Tensorclass(metaclass=TensorclassMeta):
-    _: KW_ONLY
-    batch_size: torch.Size | T.Sequence[int]
-    device: T.Optional[torch.types.Device | str | None] = None
-
+class TensorclassBase(TensorDictBase, metaclasss=TensorclassMeta):
     @property
     def shape(self) -> torch.Size: ...
     @property
@@ -126,12 +122,18 @@ class Tensorclass(metaclass=TensorclassMeta):
     def select(self) -> T.Self: ...
     def keys(self) -> T.Sequence[str]: ...
 
+class Tensorclass(TensorclassBase):
+    _: KW_ONLY
+    batch_size: torch.Size | T.Sequence[int]
+    device: T.Optional[torch.types.Device | str | None] = None
+
 _T = T.TypeVar("_T", bound=T.TypedDict)
 
 class TypedTensorDict(tensordict.TensorDict, T.Generic[_T]):
     __total__: bool
 
     def __new__(cls, data: _T, *, device: torch.types.Device, batch_size: T.Sequence[int]): ...
+    def to_dict(self) -> _T: ...
     def state_dict(self) -> _T: ...
     def load_state_dict(self, state_dict: _T) -> T.Self: ...
     def __getitem__(self, key: str) -> T.Any: ...

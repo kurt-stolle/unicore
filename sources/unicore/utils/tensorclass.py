@@ -18,7 +18,7 @@ __all__ = ["Tensorclass", "TypedTensorDict", "TensorDict", "TensorDictBase"]
 __dir__ = ["Tensorclass", "TypedTensorDict", "TensorDict", "TensorDictBase"]
 
 
-@T.dataclass_transform()
+# @T.dataclass_transform()
 class TensorclassMeta(type):
     """
     TensorclassMeta is a metaclass that wraps the `@tensorclass` decorator around the child.
@@ -43,6 +43,7 @@ class TensorclassMeta(type):
         return issubclass(sub, TensorDictBase) or super().__subclasscheck__(sub)
 
 
+@T.dataclass_transform()
 class Tensorclass(metaclass=TensorclassMeta):
     """
     Tensorclass is a class that allows you to create a `tensordict`-like
@@ -84,24 +85,19 @@ class Tensorclass(metaclass=TensorclassMeta):
         pytree._register_pytree_node(cls, cls._flatten, cls._unflatten)
 
 
-# def _tensorclass_flatten(obj: Tensorclass) -> T.Tuple[T.List[T.Any], pytree.Context]:
+_TensorDictType = T.TypeVar("_TensorDictType", bound=TensorDictBase)
 
 
-# def _tensorclass_unflatten(values: T.List[T.Any], context: pytree.Context) -> Tensorclass:
-#     ...
-
-# def _tensorclass_serialize(context: pytree.Context) -> T.Any:
-#     ...
-
-# def _tensorclass_deserialize(dumpable_context: pytree.DumpableContext) -> Tensorclass:
-#     ...
-
-
-class TypedTensorDict(TensorDict):
+class TypedTensorDict(TensorDict, T.Generic[_TensorDictType]):
     __slots__ = ()
 
-    def __new__(cls, *args, **kwargs) -> TensorDict:
-        return TensorDict(*args, **kwargs)
+    def to_dict(self) -> _TensorDictType:
+        raise NotImplementedError()
 
     def __class_getitem__(cls, item):
-        return item
+        raise NotImplementedError()
+
+    if not T.TYPE_CHECKING:
+
+        def __new__(cls, *args, **kwargs) -> TensorDict:
+            return TensorDict(*args, **kwargs)
