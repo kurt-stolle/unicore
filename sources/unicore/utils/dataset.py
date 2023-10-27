@@ -5,7 +5,7 @@ Implements a framework for working with datasets that have varying layouts and d
 from __future__ import annotations
 
 import abc
-import dataclasses
+import dataclasses as D
 import functools
 import pickle
 import random
@@ -23,7 +23,6 @@ from unicore import file_io
 from unicore.datapipes import LazyPickleCache
 from unicore.utils.distributed import is_main_process, wait_for_sync
 from unicore.utils.frozendict import frozendict
-from unicore.utils.lazy import lazyproperty
 
 __all__ = ["Dataset"]
 
@@ -37,7 +36,7 @@ _KEY_HASH = "_hash_value"
 _KEY_INFOFUNC = "_info_fn"
 
 
-@T.dataclass_transform(field_specifiers=(dataclasses.Field, dataclasses.field), kw_only_default=True)
+@T.dataclass_transform(field_specifiers=(D.Field, D.field), kw_only_default=True)
 class DatasetMeta(abc.ABCMeta):
     @classmethod
     @override
@@ -76,7 +75,7 @@ class DatasetMeta(abc.ABCMeta):
         ds_cls = super().__new__(mcls, name, bases, ns, **kwds)
 
         # Convert to dataclass
-        ds_cls = dataclasses.dataclass(slots=has_slots, weakref_slot=has_slots, kw_only=True)(ds_cls)  # type: ignore
+        ds_cls = D.dataclass(slots=has_slots, weakref_slot=has_slots, kw_only=True)(ds_cls)  # type: ignore
 
         return ds_cls
 
@@ -85,7 +84,7 @@ def empty_info():
     return frozendict()
 
 
-# @dataclasses.dataclass(slots=True, frozen=True, weakref_slot=True)
+# @D.dataclass(slots=True, frozen=True, weakref_slot=True)
 class Dataset(T.Generic[_T_MFST, _T_QITEM, _T_DITEM, _T_DINFO], metaclass=DatasetMeta, extra_slots=("__hash")):
     """
     Dataset class, which implements three main attributes: manifest, queue, and datapipe.
@@ -188,32 +187,43 @@ class Dataset(T.Generic[_T_MFST, _T_QITEM, _T_DITEM, _T_DINFO], metaclass=Datase
         """
         ...
 
-    @lazyproperty
+    _manifest: _T_MFST | None = D.field(default=None, hash=False, repr=False, compare=False, init=False)
+
+    @property
     def manifest(self) -> _T_MFST:
         """
         Manifest attribute: represents the results of discovering a dataset's files on the filesystem, e.g.
         a list of what files are in the dataset, and where they are located.
         """
-        path = file_io.get_local_path(f"//cache/datasets/manifest_{hash(self)}.pth")
-        cache = LazyPickleCache(path)
+        if self._manifest is None:
+            # The manifest should be stored until the cache path provided by the environment
+            path = file_io.get_local_path(f"//cache/datasets/manifest_{hash(self)}.pth")
 
-        if not file_io.isfile(path) and is_main_process():
-            mfst = self._build_manifest()
-            cache.data = mfst
+            # Load the manifest from cache
+            cache = LazyPickleCache(path)
 
-        wait_for_sync()  # Wait for main process to finish writing cache
+            # Generate the manifest if it is not cached
+            if not file_io.isfile(path) and is_main_process():
+                mfst = self._build_manifest()
+                cache.data = mfst
 
-        return cache.data  # type: ignore
+            # Wait while the manifest is being generated
+            wait_for_sync()
+
+            self._manifest = cache.data  # type: ignore
+        return self._manifest
 
     # ----- #
     # QUEUE #
     # ----- #
 
-    queue_fn: T.Callable[
-        [_T_MFST], T.Mapping[str, _T_QITEM] | T.Iterable[tuple[str, _T_QITEM]]
-    ] | None = dataclasses.field(default=None, repr=False, compare=False, kw_only=True)
+    queue_fn: T.Callable[[_T_MFST], T.Mapping[str, _T_QITEM] | T.Iterable[tuple[str, _T_QITEM]]] | None = D.field(
+        default=None, repr=False, compare=False, kw_only=True
+    )
 
-    @lazyproperty
+    _queue: _Dataqueue[_T_QITEM] | None = D.field(default=None, hash=False, repr=False, compare=False, init=False)
+
+    @property
     def queue(self) -> _Dataqueue[_T_QITEM]:
         """
         Queue attribute: represents an ordered and transformed version of the manifest that server
@@ -224,28 +234,26 @@ class Dataset(T.Generic[_T_MFST, _T_QITEM, _T_DITEM, _T_DINFO], metaclass=Datase
         a map-style dataset over unloaded data records. Can be indexed by key (string) and using
         the index number (int).
         """
+        if self._queue is None:
+            qmap = self.queue_fn(self.manifest)
+            if isinstance(qmap, T.Mapping):
+                qmap = dict(qmap)
+            elif isinstance(qmap, T.Iterable):
+                qmap = {k: v for k, v in qmap}
+            else:
+                raise TypeError(f"Queue function must return a mapping or iterable, not {type(qmap)}")
 
-        mfst = self.manifest
-        qfn = self.queue_fn
-        if qfn is None:
-            raise NotImplementedError("Queue function must be defined to initialize a concrete dataset.")
-        qmap = qfn(mfst)
+            if len(qmap) == 0:
+                raise ValueError("Queue map must not be empty!")
 
-        if isinstance(qmap, T.Mapping):
-            qmap = dict(qmap)
-        elif isinstance(qmap, T.Iterable):
-            qmap = {k: v for k, v in qmap}
-        else:
-            raise TypeError(f"Queue function must return a mapping or iterable, not {type(qmap)}")
-
-        if len(qmap) == 0:
-            raise ValueError("Queue map must not be empty!")
-
-        return _Dataqueue(qmap)
+            # Store for later
+            self._queue = _Dataqueue(qmap)
+        return self._queue
 
     # -------- #
     # DATAPIPE #
     # -------- #
+
     @classmethod
     @abc.abstractmethod
     def _load_data(cls, key: str, item: _T_QITEM, info: _T_DINFO) -> _T_DITEM:
@@ -254,12 +262,18 @@ class Dataset(T.Generic[_T_MFST, _T_QITEM, _T_DITEM, _T_DINFO], metaclass=Datase
         """
         ...
 
-    @lazyproperty
+    _datapipe: _Datapipe[_T_DITEM, _T_DINFO] | None = D.field(
+        default=None, hash=False, repr=False, compare=False, init=False
+    )
+
+    @property
     def datapipe(self) -> _Datapipe[_T_DITEM, _T_DINFO]:
         """
         Datapipe attribute: represents the output dataset
         """
-        return _Datapipe(self._load_data, queue=self.queue, info=self.info)
+        if self._datapipe is None:
+            self._datapipe = _Datapipe(self._load_data, queue=self.queue, info=self.info)
+        return self._datapipe
 
     # --------------- #
     # INFO / METADATA #

@@ -22,6 +22,10 @@ class TensorclassMeta(type):
 
 @T.dataclass_transform()
 class TensorclassBase(TensorDictBase, metaclasss=TensorclassMeta):
+    # Tensorclass-specific methods
+    def from_tensordict(self, tensordict: TensorDictBase) -> T.Self: ...
+
+    # Inherited methods
     @property
     def shape(self) -> torch.Size: ...
     @property
