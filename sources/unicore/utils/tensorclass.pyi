@@ -21,9 +21,13 @@ class TensorclassMeta(type):
     pass
 
 @T.dataclass_transform()
-class TensorclassBase(TensorDictBase, metaclasss=TensorclassMeta):
+class TensorclassDecorations(TensorDictBase, metaclasss=TensorclassMeta):
+    # Tensorclass-specific features added by us
+    def stack(cls, *others: T.Self) -> T.Self: ...
+
     # Tensorclass-specific methods
-    def from_tensordict(self, tensordict: TensorDictBase) -> T.Self: ...
+    @classmethod
+    def from_tensordict(cls, tensordict: TensorDictBase, non_tensordict: dict[str, T.Any] | None = None) -> T.Self: ...
 
     # Inherited methods
     @property
@@ -126,7 +130,7 @@ class TensorclassBase(TensorDictBase, metaclasss=TensorclassMeta):
     def select(self) -> T.Self: ...
     def keys(self) -> T.Sequence[str]: ...
 
-class Tensorclass(TensorclassBase):
+class Tensorclass(TensorclassDecorations):
     _: KW_ONLY
     batch_size: torch.Size | T.Sequence[int]
     device: T.Optional[torch.types.Device | str | None] = None

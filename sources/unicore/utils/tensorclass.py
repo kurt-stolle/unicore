@@ -69,6 +69,20 @@ class Tensorclass(metaclass=TensorclassMeta):
         }
 
         return values, context
+    
+    @classmethod
+    def stack(cls, *others: T.Self) -> T.Self:
+        """
+        Stacks multiple tensorclasses together.
+        """
+        if len(others) == 0:
+            raise ValueError("Must provide at least one tensorclass to stack.")
+
+        if len(others) == 1:
+            return others[0]
+
+        td = torch.stack(others) # type: ignore
+        return cls.from_tensordict(td)
 
     @classmethod
     def _unflatten(cls, values: T.List[T.Any], context: pytree.Context) -> T.Self:
