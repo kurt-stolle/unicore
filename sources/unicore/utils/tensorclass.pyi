@@ -23,6 +23,7 @@ class TensorclassMeta(type):
 @T.dataclass_transform()
 class TensorclassDecorations(TensorDictBase, metaclasss=TensorclassMeta):
     # Tensorclass-specific features added by us
+    @classmethod
     def stack(cls, *others: T.Self) -> T.Self: ...
 
     # Tensorclass-specific methods
