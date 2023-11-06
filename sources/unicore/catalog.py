@@ -170,7 +170,7 @@ class DataManager(_DataManagerBase[Dataset]):
         Return the info for the given dataset ID.
         """
         key = self.canonicalize_id(id)
-        return self._get_info(key)()
+        return self._get_info(key)
 
     def list_info(self) -> frozenset[str]:
         """

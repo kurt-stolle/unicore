@@ -17,6 +17,7 @@ import numpy as np
 import numpy.typing as NP
 import torch
 import torch.utils.data
+import base64
 from typing_extensions import override
 
 from unicore import file_io
@@ -46,10 +47,10 @@ class DatasetMeta(abc.ABCMeta):
         ns = {}
 
         # Inherit __hash__ from base class, this is different from the default behavior
-        for base in bases:
-            if hasattr(base, "__hash__"):
-                ns["__hash__"] = base.__hash__
-                break
+        # for base in bases:
+        #     if hasattr(base, "__hash__"):
+        #         ns["__hash__"] = base.__hash__
+        #         break
 
         # Add an instance cache to the class
         ns[_KEY_CACHE] = {}
@@ -110,34 +111,34 @@ class Dataset(T.Generic[_T_MFST, _T_QITEM, _T_DITEM, _T_DINFO], metaclass=Datase
 
     _info_fn: T.ClassVar[T.Callable[[], T.Hashable] | None]
 
-    def __new__(cls, **kwargs):
-        """
-        Override __new__ to perform the following steps:
+    # def __new__(cls, **kwargs):
+    #     """
+    #     Override __new__ to perform the following steps:
 
-        1. Compute a hash for the object from the values passed to __new__.
-        2. Check if the hash is already in the cache:
-         - TRUE  : Return the cached object.
-         - FALSE : Set __hash__ to the computed hash, and cache the object.
-        """
+    #     1. Compute a hash for the object from the values passed to __new__.
+    #     2. Check if the hash is already in the cache:
+    #      - TRUE  : Return the cached object.
+    #      - FALSE : Set __hash__ to the computed hash, and cache the object.
+    #     """
 
-        if getattr(cls, _KEY_INFOFUNC, empty_info) is empty_info:
-            raise NotImplementedError("Info function must be defined to initialize a concrete dataset.")
+    #     if getattr(cls, _KEY_INFOFUNC, empty_info) is empty_info:
+    #         raise NotImplementedError("Info function must be defined to initialize a concrete dataset.")
 
-        kwargs_keys = sorted(kwargs.keys())
-        kwargs_hash = [hash(kwargs[key]) for key in kwargs_keys]
-        obj_hash = hash(tuple(kwargs_hash + kwargs_keys))
+    #     kwargs_keys = sorted(k for k in kwargs.keys() if k != "queue_fn")
+    #     kwargs_hash = [hash(kwargs[key]) for key in kwargs_keys]
+    #     obj_hash = hash(tuple(kwargs_hash + kwargs_keys))
 
-        cached = getattr(cls, _KEY_CACHE)
+    #     cached = getattr(cls, _KEY_CACHE)
 
-        if obj_hash in cached:
-            return cached[obj_hash]
+    #     if obj_hash in cached:
+    #         return cached[obj_hash]
 
-        obj = super().__new__(cls)
-        setattr(obj, _KEY_HASH, obj_hash)
+    #     obj = super().__new__(cls)
+    #     setattr(obj, _KEY_HASH, obj_hash)
 
-        cached[obj_hash] = obj  # store instance in cache
+    #     cached[obj_hash] = obj  # store instance in cache
 
-        return obj
+    #     return obj
 
     # @override
     # def __init_subclass__(cls, *, info: T.T.Callable[[], T.Hashable] = empty_info, **kwargs):
@@ -153,12 +154,12 @@ class Dataset(T.Generic[_T_MFST, _T_QITEM, _T_DITEM, _T_DINFO], metaclass=Datase
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__()
 
-    @override
-    def __hash__(self) -> int:
-        """
-        Hash function for the dataset, which is computed from the hash of initialization arguments.
-        """
-        return getattr(self, _KEY_HASH)
+    # @override
+    # def __hash__(self) -> int:
+    #     """
+    #     Hash function for the dataset, which is computed from the hash of initialization arguments.
+    #     """
+    #     return getattr(self, _KEY_HASH)
 
     # -------- #
     # MANIFEST #
@@ -197,7 +198,8 @@ class Dataset(T.Generic[_T_MFST, _T_QITEM, _T_DITEM, _T_DINFO], metaclass=Datase
         """
         if self._manifest is None:
             # The manifest should be stored until the cache path provided by the environment
-            path = file_io.get_local_path(f"//cache/datasets/manifest_{hash(self)}.pth")
+            file_name = base64.b64encode(repr(self).encode(), "+-".encode()).decode()
+            path = file_io.get_local_path(f"//cache/datasets/manifest_{file_name}.pth")
 
             # Load the manifest from cache
             cache = LazyPickleCache(path)
@@ -218,7 +220,7 @@ class Dataset(T.Generic[_T_MFST, _T_QITEM, _T_DITEM, _T_DINFO], metaclass=Datase
     # ----- #
 
     queue_fn: T.Callable[[_T_MFST], T.Mapping[str, _T_QITEM] | T.Iterable[tuple[str, _T_QITEM]]] | None = D.field(
-        default=None, repr=False, compare=False, kw_only=True
+        default=None, repr=True, compare=False, kw_only=True
     )
 
     _queue: _Dataqueue[_T_QITEM] | None = D.field(default=None, hash=False, repr=False, compare=False, init=False)
