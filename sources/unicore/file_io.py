@@ -89,6 +89,7 @@ for h in (
     EnvPathHandler("//datasets/", "UNICORE_DATASETS", "./datasets"),
     EnvPathHandler("//cache/", "UNICORE_CACHE", "./cache"),
     EnvPathHandler("//output/", "UNICORE_OUTPUT", "./output"),
+    EnvPathHandler("//scratch/", "UNICORE_SCRATCH", "./scratch")
 ):
     _manager.register_handler(h, allow_override=False)
 _exports: frozenset[str] = frozenset(fn_name for fn_name in dir(_manager) if not fn_name.startswith("_"))
