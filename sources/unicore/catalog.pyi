@@ -18,6 +18,8 @@ InfoFunc: TypeAlias = Callable[[], dict[str, InfoBasic | Sequence[InfoBasic]]]
 Info: TypeAlias = InfoFunc | dict[str, InfoBasic]
 KeyLike: TypeAlias = type | str | Callable[..., Any]
 
+def canonicalize_id(id: KeyLike) -> str: ...
+
 _D = TypeVar("_D", bound=Dataset)
 _D_co = TypeVar("_D_co", bound=Dataset, covariant=True)
 

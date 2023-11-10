@@ -11,7 +11,7 @@ from typing_extensions import Self
 from unicore.utils.dataset import Dataset
 from unicore.utils.registry import Registry
 
-__all__ = ["DataManager", "InfoFunc", "Info", "KeyLike"]
+__all__ = ["canonicalize_id", "DataManager", "InfoFunc", "Info", "KeyLike"]
 
 
 class Info(T.Hashable):
@@ -26,24 +26,50 @@ KeyLike: T.TypeAlias = type | str | T.Callable[..., T.Any]
 _D = T.TypeVar("_D")
 _D_co = T.TypeVar("_D_co", covariant=True)
 
-_STR_TO_KEY = re.compile(r"(?<=[a-z])(?=[A-Z])|[^a-zA-Z]")
+_STR_TO_KEY = re.compile(r"(?<=[a-z\d])(?=[A-Z])|[^a-zA-Z\d\-/]")
+
+
+def canonicalize_id(other: KeyLike) -> str:
+    """
+    Convert a string or class to a canonical ID.
+
+    Parameters
+    ----------
+    other : Union[str, type]
+        The string or class to convert.
+
+    Returns
+    -------
+    str
+        The canonical ID.
+
+    Examples
+    --------
+    >>> canonicalize_id("foo")
+    "foo"
+    >>> canonicalize_id("Foo")
+    "foo"
+    >>> canonicalize_id("FooBar")
+    "foo-bar"
+    >>> canonicalize_id("FooBarBaz")
+    "foo-bar-baz"
+    >>> canonicalize_id("foo_bar")
+    "foo-bar"
+    """
+    if isinstance(other, types.LambdaType):
+        raise ValueError("Cannot infer ID from lambda function")
+
+    name = other if isinstance(other, str) else other.__name__.replace("Dataset", "")
+
+    def _to_snake_case(s: str) -> str:
+        return "".join(_STR_TO_KEY.sub(" ", s).strip().replace(" ", "-").lower())
+
+    # name = "/".join(_to_snake_case(s2) for s1 in name.split("/-_"))
+
+    return _to_snake_case(name)
 
 
 class _DataManagerBase(T.Generic[_D_co]):
-    @staticmethod
-    def canonicalize_id(other: KeyLike) -> str:
-        if isinstance(other, types.LambdaType):
-            raise ValueError("Cannot infer ID from lambda function")
-
-        name = other if isinstance(other, str) else other.__name__.replace("Dataset", "")
-
-        def _to_snake_case(s: str) -> str:
-            return "".join(_STR_TO_KEY.sub(" ", s).strip().replace(" ", "_").lower())
-
-        name = "/".join(_to_snake_case(s) for s in name.split("/"))
-
-        return name
-
     def __init__(self):
         self._info: Registry[T.Any] = Registry()
         self._data: Registry[type[_D_co]] = Registry()
@@ -104,7 +130,7 @@ class DataManager(_DataManagerBase[Dataset]):
         """
 
         def wrapped(ds: type[Dataset]) -> type[Dataset]:
-            key = id or self.canonicalize_id(ds)
+            key = id or canonicalize_id(ds)
             if key in self.list_datasets():
                 raise KeyError(f"Already registered: {key}")
             if key in self.list_info():
@@ -129,7 +155,7 @@ class DataManager(_DataManagerBase[Dataset]):
         """
         Return the dataset class for the given dataset ID.
         """
-        key = self.canonicalize_id(id)
+        key = canonicalize_id(id)
         return self._get_data(key)
 
     def list_datasets(self) -> frozenset[str]:
@@ -169,7 +195,7 @@ class DataManager(_DataManagerBase[Dataset]):
         """
         Return the info for the given dataset ID.
         """
-        key = self.canonicalize_id(id)
+        key = canonicalize_id(id)
         return self._get_info(key)
 
     def list_info(self) -> frozenset[str]:

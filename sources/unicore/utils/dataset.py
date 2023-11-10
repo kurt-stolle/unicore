@@ -5,6 +5,7 @@ Implements a framework for working with datasets that have varying layouts and d
 from __future__ import annotations
 
 import abc
+import base64
 import dataclasses as D
 import functools
 import pickle
@@ -17,7 +18,6 @@ import numpy as np
 import numpy.typing as NP
 import torch
 import torch.utils.data
-import base64
 from typing_extensions import override
 
 from unicore import file_io

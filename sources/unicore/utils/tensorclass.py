@@ -69,7 +69,7 @@ class Tensorclass(metaclass=TensorclassMeta):
         }
 
         return values, context
-    
+
     @classmethod
     def stack(cls, *others: T.Self) -> T.Self:
         """
@@ -81,7 +81,7 @@ class Tensorclass(metaclass=TensorclassMeta):
         if len(others) == 1:
             return others[0]
 
-        td = torch.stack(others) # type: ignore
+        td = torch.stack(others)  # type: ignore
         return cls.from_tensordict(td)
 
     @classmethod
