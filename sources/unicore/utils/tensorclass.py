@@ -92,6 +92,12 @@ class Tensorclass(metaclass=TensorclassMeta):
             # names=context["names"],
         )
         return obj
+    
+    def __getattr__(self, name: str) -> T.Any:
+        try:
+            return super().__getattr__(name)
+        except AttributeError as e:
+            return self.get(name)
 
     def __init_subclass__(cls, **kwargs) -> None:
         super().__init_subclass__(**kwargs)

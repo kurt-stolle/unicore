@@ -1,19 +1,14 @@
 from __future__ import annotations
 
-import typing
+import types 
+import typing as T
 from weakref import WeakValueDictionary
 
-from typing_extensions import Self, override
+from typing_extensions import override
 
-_O = typing.TypeVar("_O", bound=typing.Any)
-_O_co = typing.TypeVar("_O_co", bound=typing.Any, covariant=True)
-_O_cn = typing.TypeVar("_O_cn", bound=typing.Any, contravariant=True)
-_I = typing.TypeVar("_I", bound="type[MissingValue]")
-_I_co = typing.TypeVar("_I_co", bound="type[MissingValue]", covariant=True)
-_I_cn = typing.TypeVar("_I_cn", bound="type[MissingValue]", contravariant=True)
+_O = T.TypeVar("_O", bound=T.Any)
 
-
-class MissingValue(typing.Generic[_O]):
+class MissingValue:
     """A sentinel object that can be used as a value.
 
     Attributes
@@ -23,9 +18,12 @@ class MissingValue(typing.Generic[_O]):
 
     """
 
-    __sentinel_types__: typing.ClassVar[WeakValueDictionary[str, Self]] = WeakValueDictionary()
+    __sentinel_types__: T.ClassVar[WeakValueDictionary[str, T.Self]] = WeakValueDictionary()
 
-    def __new__(cls, name: str) -> Self:
+    def __class_getitem__(cls, name: str) -> types.GenericAlias:
+        return types.GenericAlias(cls, (name.upper()))
+
+    def __new__(cls, name: str) -> T.Self:
         """
         Create a new sentinel value or return an existing one.
 
@@ -51,7 +49,7 @@ class MissingValue(typing.Generic[_O]):
         self.__name__: typing.Final[str] = name
 
     @override
-    def __eq__(self, other: typing.Any) -> typing.TypeGuard[Self]:
+    def __eq__(self, other: typing.Any) -> typing.TypeGuard[T.Self]:
         """
         Check if this sentinel value is equal to another object.
 
@@ -70,7 +68,7 @@ class MissingValue(typing.Generic[_O]):
         return isinstance(other, MissingValue) and self.__name__ == other.__name__
 
     @override
-    def __ne__(self, other: typing.Any) -> typing.TypeGuard[Self]:
+    def __ne__(self, other: T.Any) -> T.TypeGuard[T.Self]:
         """
         Check if this sentinel value is not equal to another object.
 
@@ -114,16 +112,16 @@ class MissingValue(typing.Generic[_O]):
         """
         return f"?{self.__name__}"
 
-    def __contains__(self, other: typing.Any) -> typing.TypeGuard[Self]:
+    def __contains__(self, other: typing.Any) -> typing.TypeGuard[T.Self]:
         return self.is_missing(other)
 
-    def is_value(self, other: _O | Self) -> typing.TypeGuard[_O]:
+    def is_value(self, other: _O | T.Self) -> typing.TypeGuard[_O]:
         return not self.is_missing(other)
 
-    def is_missing(self, other: typing.Any | Self) -> typing.TypeGuard[Self]:
+    def is_missing(self, other: typing.Any | T.Self) -> typing.TypeGuard[T.Self]:
         return other is self
 
-    def guard_as(self, other: _O | Self, fn: typing.Callable[[Self], _O]) -> _O:
+    def guard_as(self, other: _O | T.Self, fn: typing.Callable[[T.Self], _O]) -> _O:
         if self.is_value(other):
             return other
         else:
