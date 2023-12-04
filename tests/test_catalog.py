@@ -1,11 +1,11 @@
 import pytest
 
-from unicore.catalog import fork
+from unicore.catalog import DataManager
 
 
 @pytest.fixture
 def catalog():
-    return fork()
+    return DataManager()
 
 
 def test_canonicalize_id():
@@ -31,7 +31,7 @@ def test_catalog_register(catalog):
         test_value = "foo"
 
         @staticmethod
-        def info():
+        def info(id_: str):
             return {"test_info": "bar"}
 
     assert catalog.get_dataset("foo_data").test_value == "foo"

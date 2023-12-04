@@ -92,7 +92,7 @@ class Tensorclass(metaclass=TensorclassMeta):
             # names=context["names"],
         )
         return obj
-    
+
     def __getattr__(self, name: str) -> T.Any:
         try:
             return super().__getattr__(name)

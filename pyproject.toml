@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "unicore"
 description = "UniCore: Unified Perception Core LIbraries"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 keywords = [
     "perception",
     "computer vision",
@@ -19,13 +19,12 @@ authors = [{ name = "Kurt Stolle", email = "k.h.w.stolle@gmail.com" }]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Programming Language :: Python",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: Implementation :: CPython",
 ]
 dependencies = [
-    "torch >= 2.0.0",
-    "torchvision >= 0.15.1",
+    "torch >= 2.1.0",
+    "torchvision",
     "torchdata",
     "iopath",
     "tensordict",

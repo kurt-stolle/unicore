@@ -31,10 +31,7 @@ _T_MFST = T.TypeVar("_T_MFST", bound=T.TypedDict)  # Manifest
 _T_QITEM = T.TypeVar("_T_QITEM")  # Item in queue
 _T_DITEM = T.TypeVar("_T_DITEM")  # Item in datapipe
 _T_DINFO = T.TypeVar("_T_DINFO")  # Meta info about the dataset
-
-_KEY_CACHE = "_cached_instances"
-_KEY_HASH = "_hash_value"
-_KEY_INFOFUNC = "_info_fn"
+_CREATE_INFO = "_create_info"
 
 
 @T.dataclass_transform(field_specifiers=(D.Field, D.field), kw_only_default=True)
@@ -46,20 +43,13 @@ class DatasetMeta(abc.ABCMeta):
 
         ns = {}
 
-        # Inherit __hash__ from base class, this is different from the default behavior
-        # for base in bases:
-        #     if hasattr(base, "__hash__"):
-        #         ns["__hash__"] = base.__hash__
-        #         break
-
-        # Add an instance cache to the class
-        ns[_KEY_CACHE] = {}
-
+        # Set 'get_info' in the namespace of all classes of this metatype,
         info = kwds.pop("info", None)
         if info is None:
-            info = next((getattr(base, _KEY_INFOFUNC) for base in bases if hasattr(base, _KEY_INFOFUNC)), empty_info)
+            # If not provided, then 'get_info' is not inherited but copied.
+            info = next((getattr(base, _CREATE_INFO) for base in bases if hasattr(base, _CREATE_INFO)), empty_info)
         if callable(info):
-            ns[_KEY_INFOFUNC] = as_picklable(info)
+            ns[_CREATE_INFO] = as_picklable(info)
         else:
             raise TypeError(f"info must be callable, got {type(info)}")
 
@@ -85,7 +75,6 @@ def empty_info():
     return frozendict()
 
 
-# @D.dataclass(slots=True, frozen=True, weakref_slot=True)
 class Dataset(T.Generic[_T_MFST, _T_QITEM, _T_DITEM, _T_DINFO], metaclass=DatasetMeta, extra_slots=("__hash")):
     """
     Dataset class, which implements three main attributes: manifest, queue, and datapipe.
@@ -109,57 +98,9 @@ class Dataset(T.Generic[_T_MFST, _T_QITEM, _T_DITEM, _T_DINFO], metaclass=Datase
     a specific sub-dataset by switching the parent argument.
     """
 
-    _info_fn: T.ClassVar[T.Callable[[], T.Hashable] | None]
-
-    # def __new__(cls, **kwargs):
-    #     """
-    #     Override __new__ to perform the following steps:
-
-    #     1. Compute a hash for the object from the values passed to __new__.
-    #     2. Check if the hash is already in the cache:
-    #      - TRUE  : Return the cached object.
-    #      - FALSE : Set __hash__ to the computed hash, and cache the object.
-    #     """
-
-    #     if getattr(cls, _KEY_INFOFUNC, empty_info) is empty_info:
-    #         raise NotImplementedError("Info function must be defined to initialize a concrete dataset.")
-
-    #     kwargs_keys = sorted(k for k in kwargs.keys() if k != "queue_fn")
-    #     kwargs_hash = [hash(kwargs[key]) for key in kwargs_keys]
-    #     obj_hash = hash(tuple(kwargs_hash + kwargs_keys))
-
-    #     cached = getattr(cls, _KEY_CACHE)
-
-    #     if obj_hash in cached:
-    #         return cached[obj_hash]
-
-    #     obj = super().__new__(cls)
-    #     setattr(obj, _KEY_HASH, obj_hash)
-
-    #     cached[obj_hash] = obj  # store instance in cache
-
-    #     return obj
-
-    # @override
-    # def __init_subclass__(cls, *, info: T.T.Callable[[], T.Hashable] = empty_info, **kwargs):
-    #     from unicore.utils.pickle import as_picklable
-
-    #     super().__init_subclass__(**kwargs)
-
-    #     if info is not None and not callable(info):
-    #         raise TypeError(f"info must be callable, got {type(info)}")
-    #     cls.info_fn = as_picklable(info)
-
     @override
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__()
-
-    # @override
-    # def __hash__(self) -> int:
-    #     """
-    #     Hash function for the dataset, which is computed from the hash of initialization arguments.
-    #     """
-    #     return getattr(self, _KEY_HASH)
 
     # -------- #
     # MANIFEST #
@@ -280,13 +221,15 @@ class Dataset(T.Generic[_T_MFST, _T_QITEM, _T_DITEM, _T_DINFO], metaclass=Datase
     # --------------- #
     # INFO / METADATA #
     # --------------- #
+    _create_info: T.ClassVar[T.Callable[[], _T_DINFO] | None]
+
     @classmethod
     @functools.lru_cache(maxsize=None)
     def read_info(cls) -> T.Any:
         """
         Info map attribute: represents the metadata for each item in the queue.
         """
-        return getattr(cls, _KEY_INFOFUNC)()
+        return cls._create_info()
 
     @property
     def info(self) -> _T_DINFO:

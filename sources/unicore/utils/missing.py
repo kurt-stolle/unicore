@@ -1,12 +1,13 @@
 from __future__ import annotations
 
-import types 
+import types
 import typing as T
 from weakref import WeakValueDictionary
 
 from typing_extensions import override
 
 _O = T.TypeVar("_O", bound=T.Any)
+
 
 class MissingValue:
     """A sentinel object that can be used as a value.

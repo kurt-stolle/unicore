@@ -4,83 +4,64 @@ import functools
 import re
 import types
 import typing as T
-from typing import final
-
-from typing_extensions import Self
 
 from unicore.utils.dataset import Dataset
 from unicore.utils.registry import Registry
 
-__all__ = ["canonicalize_id", "DataManager", "InfoFunc", "Info", "KeyLike"]
+__all__ = ["DataManager"]
 
 
-class Info(T.Hashable):
-    """
-    A class containing information about a dataset, also know as the dataset's metadata.
-    """
+DEFAULT_ID_PATTERN: T.Final[re.Pattern] = re.compile(r"^[a-z\d\-]+$")
 
-
-InfoFunc: T.TypeAlias = T.Callable[[], Info]
-KeyLike: T.TypeAlias = type | str | T.Callable[..., T.Any]
-
-_D = T.TypeVar("_D")
 _D_co = T.TypeVar("_D_co", covariant=True)
+_I_co = T.TypeVar("_I_co", covariant=True)
+_P = T.ParamSpec("_P")
 
-_STR_TO_KEY = re.compile(r"(?<=[a-z\d])(?=[A-Z])|[^a-zA-Z\d\-/]")
 
-
-def canonicalize_id(other: KeyLike) -> str:
+@T.final
+class DataManager(T.Generic[_D_co, _I_co]):
     """
-    Convert a string or class to a canonical ID.
-
-    Parameters
-    ----------
-    other : Union[str, type]
-        The string or class to convert.
-
-    Returns
-    -------
-    str
-        The canonical ID.
-
-    Examples
-    --------
-    >>> canonicalize_id("foo")
-    "foo"
-    >>> canonicalize_id("Foo")
-    "foo"
-    >>> canonicalize_id("FooBar")
-    "foo-bar"
-    >>> canonicalize_id("FooBarBaz")
-    "foo-bar-baz"
-    >>> canonicalize_id("foo_bar")
-    "foo-bar"
+    Data manager for registering datasets and their info functions.
     """
-    if isinstance(other, types.LambdaType):
-        raise ValueError("Cannot infer ID from lambda function")
 
-    name = other if isinstance(other, str) else other.__name__.replace("Dataset", "")
+    def __init__(self, *, id_pattern: re.Pattern = DEFAULT_ID_PATTERN, variant_separator: str = "/"):
+        self._variant_separator: T.Final[str] = variant_separator
+        self._id_pattern: T.Final[str] = id_pattern
+        self._info: T.Final[Registry[_I_co, _D_co | str]] = Registry(self.parse_key)
+        self._data: T.Final[Registry[type[_D_co], _D_co | str]] = Registry(self.parse_key)
 
-    def _to_snake_case(s: str) -> str:
-        return "".join(_STR_TO_KEY.sub(" ", s).strip().replace(" ", "-").lower())
+    def parse_key(self, key: str, *, check_valid: bool = True) -> str:
+        """
+        Convert a string or class to a canonical ID.
 
-    # name = "/".join(_to_snake_case(s2) for s1 in name.split("/-_"))
+        Parameters
+        ----------
+        other : Union[str, type]
+            The string or class to convert.
 
-    return _to_snake_case(name)
+        Returns
+        -------
+        str
+            The canonical ID.
+        """
+        id_ = key if isinstance(key, str) else key.__name__.replace("Dataset", "")
+        id_ = id_.lower()
+        if check_valid and not self._id_pattern.match(id_):
+            raise ValueError(f"{id_} does not match {self._id_pattern.pattern}")
 
+        return id_
 
-class _DataManagerBase(T.Generic[_D_co]):
-    def __init__(self):
-        self._info: Registry[T.Any] = Registry()
-        self._data: Registry[type[_D_co]] = Registry()
+    def split_query(self, query: str) -> tuple[str, list[str]]:
+        """
+        Split a query into a dataset ID and a variant ID.
+        """
+        if self._variant_separator not in query:
+            return query, []
+        else:
+            key, variant = query.split(self._variant_separator)
+            return key, variant
 
-    def _get_data(self, key: str, /) -> type[_D_co]:
-        return self._data[key]
-
-    def _get_info(self, key: str, /) -> T.Callable[[], Info]:
-        return self._info[key]()
-
-    def __ior__(self, __other: _DataManagerBase, /) -> Self:
+    def __ior__(self, __other: DataManager, /) -> T.Self:
         """
         Merge the data and info registries of this manager with another.
         The other manager takes precedence in case of conflicts.
@@ -90,7 +71,7 @@ class _DataManagerBase(T.Generic[_D_co]):
 
         return self
 
-    def __or__(self, __other: _DataManagerBase, /) -> Self:
+    def __or__(self, __other: DataManager, /) -> T.Self:
         from copy import copy
 
         obj = copy(self)
@@ -98,26 +79,18 @@ class _DataManagerBase(T.Generic[_D_co]):
 
         return obj
 
-
-def _read_info_at(dataset: type[Dataset]) -> Info:
-    return dataset.read_info()
-
-
-@final
-class DataManager(_DataManagerBase[Dataset]):
-    """
-    Data manager for registering datasets and their info functions. This is a singleton object that can be imported from
-    the unicore.catalog module, and it is recommended to use this object instead of creating new data managers.
-    """
-
     def fork(self) -> DataManager:
         """
         Return a copy of this data manager.
         """
         return DataManager() | self
 
+    # -------- #
+    # DATASETS #
+    # -------- #
+
     def register_dataset(
-        self, id: str | None = None, *, info: T.Optional[T.Callable[[], Info]] = None
+        self, id: str | None = None, *, info: T.Optional[T.Callable[..., _I_co]] = None
     ) -> T.Callable[[type[Dataset]], type[Dataset]]:
         """
         Register a dataset.
@@ -130,7 +103,7 @@ class DataManager(_DataManagerBase[Dataset]):
         """
 
         def wrapped(ds: type[Dataset]) -> type[Dataset]:
-            key = id or canonicalize_id(ds)
+            key = id or self.parse_key(ds)
             if key in self.list_datasets():
                 raise KeyError(f"Already registered: {key}")
             if key in self.list_info():
@@ -139,82 +112,62 @@ class DataManager(_DataManagerBase[Dataset]):
             self._data[key] = ds
 
             if info is None:
-                info_fn = functools.partial(_read_info_at, ds)
+                raise ValueError(f"Dataset {key} has no info function and no info function was provided.")
+            if callable(info):
+                self._info[key] = info
             else:
-                info_fn = info
-            if callable(info_fn):
-                self._info[key] = info_fn
-            else:
-                raise TypeError(f"Invalid info function: {info_fn}")
+                raise TypeError(f"Invalid info function: {info}")
 
             return ds
 
         return wrapped
 
-    def get_dataset(self, id: str) -> type[Dataset]:
+    def get_dataset(self, query: str) -> type[Dataset]:
         """
         Return the dataset class for the given dataset ID.
         """
-        key = canonicalize_id(id)
-        return self._get_data(key)
+        return self._data[query]
 
-    def list_datasets(self) -> frozenset[str]:
+    def list_datasets(self) -> list[str]:
         """
         Return a frozenset of all registered dataset IDs.
         """
-        return self._data.list()
+        return list(self._data.keys())
+
+    # ---- #
+    # Info #
+    # ---- #
 
     def register_info(
         self,
-        id_: str,
+        id_: str | _D_co,
         /,
-    ) -> T.Callable[[InfoFunc], T.Callable[[], Info]]:
+    ) -> T.Callable[[T.Callable[_P, _I_co]], T.Callable[_P, _I_co]]:
         """
         Register a dataset.
 
         Parameters
         ----------
         id : Optional[str]
-            The ID to register the dataset with. If None, the dataset class name will be used (flattened and converted
-            to snake_case).
+            The ID to register the dataset with. If None, the dataset class name will be canonicalized using
+            ``canonicalize_id``.
         """
 
-        def wrapped(info: InfoFunc) -> T.Callable[[], Info]:
-            # info_list = []
-            # info_list.append(info if callable(info) else lambda: info)
-            # if len(extra_info) > 0:
-            #     info_list.append(lambda: extra_info)
-
+        def wrapped(info: T.Callable[_P, _I_co]) -> T.Callable[_P, _I_co]:
             self._info[id_] = info
 
             return functools.partial(self.get_info, id_)
 
         return wrapped
 
-    def get_info(self, id: KeyLike) -> Info:
+    def get_info(self, query: str) -> _I_co:
         """
         Return the info for the given dataset ID.
         """
-        key = canonicalize_id(id)
-        return self._get_info(key)
+        return self._info[query]()
 
-    def list_info(self) -> frozenset[str]:
+    def list_info(self) -> list[str]:
         """
         Return a frozenset of all registered dataset IDs.
         """
-        return self._info.list()
-
-
-_DATA_MANAGER: T.Final[DataManager] = DataManager()
-_EXPORTS: frozenset[str] = frozenset(fn_name for fn_name in dir(DataManager) if not fn_name.startswith("_"))
-
-
-def __getattr__(name: str):
-    if name in _EXPORTS:
-        return getattr(_DATA_MANAGER, name)
-    else:
-        raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
-
-
-def __dir__():
-    return __all__ + list(_EXPORTS)
+        return list(self._info.keys())
