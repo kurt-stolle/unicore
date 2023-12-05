@@ -5,16 +5,14 @@ import enum as E
 import functools
 import typing as T
 
-__all__ = ["assert_status", "mark_status", "modify_status", "pop_status", "put_status", "StatusDescriptor"]
+__all__ = ["assert_status", "modify_status", "pop_status", "put_status", "StatusDescriptor"]
 
 _O_contra = T.TypeVar("_O_contra", bound=object, contravariant=True)
 _P = T.ParamSpec("_P")
 _R_co = T.TypeVar("_R_co", covariant=True)
 _S = T.TypeVar("_S", bound=E.IntFlag, contravariant=True)
-
-if T.TYPE_CHECKING:
-    _StatusDecoFuncType: T.TypeAlias = T.Callable[T.Concatenate[_O_contra, _P], _R_co]
-    _StatusAttrType: T.TypeAlias = str | property | "StatusDescriptor"
+_StatusDecoFuncType: T.TypeAlias = T.Callable[T.Concatenate[_O_contra, _P], _R_co]
+_StatusAttrType: T.TypeAlias = str | property | "StatusDescriptor"
 
 
 def _get_error_bad_attr(attr: T.Any) -> TypeError:
@@ -173,7 +171,8 @@ class StatusDescriptor(T.Generic[_S]):
     attribute name in the descriptor.
     """
 
-    def __init__(self, default: _S | int | None = None) -> None:
+    def __init__(self, kind: type[_S], default: _S | int | None = None) -> None:
+        self._kind = kind
         self._name = None
         self._owner = None
         self._default = default
@@ -198,6 +197,41 @@ class StatusDescriptor(T.Generic[_S]):
         Run the decorated method with a certain status.
         """
         return with_status(self, status)
+
+    def __iter__(self) -> T.Iterator[_S]:
+        """
+        Returns each individual status flag present in the attribute.
+        """
+        for flag in self._kind:
+            if self & flag:
+                yield flag
+
+    def __len__(self) -> int:
+        """
+        Returns the number of status flags present in the attribute.
+        """
+        return sum(1 for _ in self)
+
+    def __contains__(self, status: _S | int) -> bool:
+        """
+        Returns whether a status flag is present in the attribute.
+        """
+        return bool(self & status)
+
+    def __getitem__(self, status: _S | int) -> bool:
+        """
+        Returns whether a status flag is present in the attribute.
+        """
+        return bool(self & status)
+
+    def __setitem__(self, status: _S | int, value: bool) -> None:
+        """
+        Sets a status flag in the attribute.
+        """
+        if value:
+            self |= status
+        else:
+            self &= ~status
 
     def pop_status(self, status: _S | int, on_exit=False) -> T.Callable[[_StatusDecoFuncType], _StatusDecoFuncType]:
         """
