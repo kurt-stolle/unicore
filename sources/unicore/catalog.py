@@ -1,8 +1,10 @@
+"""
+Implements a simple data manager for registering datasets and their info functions.
+"""
+
 from __future__ import annotations
 
-import functools
 import re
-import types
 import typing as T
 
 from unicore.utils.dataset import Dataset
@@ -11,7 +13,7 @@ from unicore.utils.registry import Registry
 __all__ = ["DataManager"]
 
 
-DEFAULT_ID_PATTERN: T.Final[re.Pattern] = re.compile(r"^[a-z\d\-]+$")
+_DEFAULT_ID_PATTERN: T.Final[re.Pattern] = re.compile(r"^[a-z\d\-]+$")
 
 _D_co = T.TypeVar("_D_co", covariant=True)
 _I_co = T.TypeVar("_I_co", covariant=True)
@@ -24,13 +26,31 @@ class DataManager(T.Generic[_D_co, _I_co]):
     Data manager for registering datasets and their info functions.
     """
 
-    def __init__(self, *, id_pattern: re.Pattern = DEFAULT_ID_PATTERN, variant_separator: str = "/"):
-        self._variant_separator: T.Final[str] = variant_separator
-        self._id_pattern: T.Final[str] = id_pattern
-        self._info: T.Final[Registry[_I_co, _D_co | str]] = Registry(self.parse_key)
-        self._data: T.Final[Registry[type[_D_co], _D_co | str]] = Registry(self.parse_key)
+    __slots__ = ("name", "variant_separator", "id_pattern", "base", "__info__", "__data__")
 
-    def parse_key(self, key: str, *, check_valid: bool = True) -> str:
+    __info__: Registry[T.Callable[..., _I_co], str]
+    __data__: Registry[type[_D_co], str]
+
+    def __init__(
+        self,
+        *,
+        id_pattern: re.Pattern = _DEFAULT_ID_PATTERN,
+        variant_separator: str = "/",
+    ):
+        """
+        Parameters
+        ----------
+        id_pattern : re.Pattern
+            The pattern to use for validating dataset IDs.
+        variant_separator : str
+            The separator to use for separating dataset IDs from variant IDs.
+        """
+        self.variant_separator: T.Final = variant_separator
+        self.id_pattern: T.Final = id_pattern
+        self.__info__ = Registry(self.parse_key)
+        self.__data__ = Registry(self.parse_key)
+
+    def parse_key(self, key: str | type[_D_co], *, check_valid: bool = True) -> str:
         """
         Convert a string or class to a canonical ID.
 
@@ -46,8 +66,8 @@ class DataManager(T.Generic[_D_co, _I_co]):
         """
         id_ = key if isinstance(key, str) else key.__name__.replace("Dataset", "")
         id_ = id_.lower()
-        if check_valid and not self._id_pattern.match(id_):
-            raise ValueError(f"{id_} does not match {self._id_pattern.pattern}")
+        if check_valid and not self.id_pattern.match(id_):
+            raise ValueError(f"{id_} ({key}) does not match {self.id_pattern.pattern}")
 
         return id_
 
@@ -55,10 +75,10 @@ class DataManager(T.Generic[_D_co, _I_co]):
         """
         Split a query into a dataset ID and a variant ID.
         """
-        if self._variant_separator not in query:
+        if self.variant_separator not in query:
             return query, []
         else:
-            key, variant = query.split(self._variant_separator)
+            key, *variant = query.split(self.variant_separator, maxsplit=1)
             return key, variant
 
     def __ior__(self, __other: DataManager, /) -> T.Self:
@@ -66,8 +86,8 @@ class DataManager(T.Generic[_D_co, _I_co]):
         Merge the data and info registries of this manager with another.
         The other manager takes precedence in case of conflicts.
         """
-        self._data |= __other._data
-        self._info |= __other._info
+        self.__data__ |= __other.__data__
+        self.__info__ |= __other.__info__
 
         return self
 
@@ -102,19 +122,19 @@ class DataManager(T.Generic[_D_co, _I_co]):
             to snake_case).
         """
 
-        def wrapped(ds: type[Dataset]) -> type[Dataset]:
+        def wrapped(ds: type[_D_co]) -> type[_D_co]:
             key = id or self.parse_key(ds)
             if key in self.list_datasets():
                 raise KeyError(f"Already registered: {key}")
             if key in self.list_info():
                 raise KeyError(f"Already registered as info: {key}. Dataset keys cannot be dually registered.")
 
-            self._data[key] = ds
+            self.__data__[key] = ds
 
             if info is None:
                 raise ValueError(f"Dataset {key} has no info function and no info function was provided.")
             if callable(info):
-                self._info[key] = info
+                self.__info__[key] = info
             else:
                 raise TypeError(f"Invalid info function: {info}")
 
@@ -122,17 +142,17 @@ class DataManager(T.Generic[_D_co, _I_co]):
 
         return wrapped
 
-    def get_dataset(self, query: str) -> type[Dataset]:
+    def get_dataset(self, query: str) -> type[_D_co]:
         """
         Return the dataset class for the given dataset ID.
         """
-        return self._data[query]
+        return self.__data__[query]
 
     def list_datasets(self) -> list[str]:
         """
         Return a frozenset of all registered dataset IDs.
         """
-        return list(self._data.keys())
+        return list(self.__data__.keys())
 
     # ---- #
     # Info #
@@ -140,7 +160,7 @@ class DataManager(T.Generic[_D_co, _I_co]):
 
     def register_info(
         self,
-        id_: str | _D_co,
+        key: str,
         /,
     ) -> T.Callable[[T.Callable[_P, _I_co]], T.Callable[_P, _I_co]]:
         """
@@ -154,9 +174,9 @@ class DataManager(T.Generic[_D_co, _I_co]):
         """
 
         def wrapped(info: T.Callable[_P, _I_co]) -> T.Callable[_P, _I_co]:
-            self._info[id_] = info
+            self.__info__[key] = info
 
-            return functools.partial(self.get_info, id_)
+            return info
 
         return wrapped
 
@@ -164,10 +184,11 @@ class DataManager(T.Generic[_D_co, _I_co]):
         """
         Return the info for the given dataset ID.
         """
-        return self._info[query]()
+        _id, variant = self.split_query(query)
+        return self.__info__[_id](*variant)
 
     def list_info(self) -> list[str]:
         """
         Return a frozenset of all registered dataset IDs.
         """
-        return list(self._info.keys())
+        return list(self.__info__.keys())

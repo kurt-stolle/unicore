@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites><testsuite name="pytest" errors="0" failures="1" skipped="0" tests="35" time="67.556" timestamp="2023-12-05T09:34:14.765193" hostname="gcn32.local.snellius.surf.nl"><testcase classname="tests.datapipes.test_io_wrap" name="test_file_lister_pipe" time="0.001" /><testcase classname="tests.test_file_io" name="test_file_io_globals" time="0.000" /><testcase classname="tests.utils.test_descriptors" name="test_objectmagic" time="0.001" /><testcase classname="tests.datapipes.test_pattern" name="test_pattern_matcher_pipe[MatchMode.ERROR]" time="0.001" /><testcase classname="tests.utils.test_missing" name="test_missing_value_type" time="0.000" /><testcase classname="tests.utils.test_frozendict" name="test_frozendict" time="0.001" /><testcase classname="tests.utils.test_matchable" name="test_matchable_class" time="0.001" /><testcase classname="tests.utils.test_pickle" name="test_pickles[some_method-1005-True]" time="0.001" /><testcase classname="tests.test_catalog" name="test_parse_key" time="0.001" /><testcase classname="tests.test_catalog" name="test_split_query" time="0.000" /><testcase classname="tests.utils.test_missing" name="test_missing_value_gaurd" time="0.000" /><testcase classname="tests.utils.test_decorators" name="test_shadowmethod" time="0.001" /><testcase classname="tests.test_file_io" name="test_file_io_environ" time="0.001" /><testcase classname="tests.datapipes.test_io_wrap" name="test_file_opener_pipe" time="0.003" /><testcase classname="tests.datapipes.test_io_wrap" name="test_file_saver_pipe" time="0.000" /><testcase classname="tests.datapipes.test_join" name="test_left_join_pipe" time="0.001" /><testcase classname="tests.utils.test_pickle" name="test_pickles[&lt;lambda&gt;-1004-False]" time="0.001" /><testcase classname="tests.utils.test_pickle" name="test_pickles[fn2-1003-True]" time="0.001" /><testcase classname="tests.utils.test_pickle" name="test_pickles[fn3-1002-True]" time="0.000" /><testcase classname="tests.utils.test_tensorclass" name="test_tensorclass_via_parent" time="0.016" /><testcase classname="tests.datapipes.test_pattern" name="test_pattern_matcher_pipe[MatchMode.IGNORE]" time="0.001" /><testcase classname="tests.datapipes.test_pattern" name="test_pattern_matcher_pipe[MatchMode.WARN]" time="0.000" /><testcase classname="tests.datapipes.test_pattern" name="test_pattern_matcher_pipe[MatchMode.FILTER]" time="0.000" /><testcase classname="tests.datapipes.test_pattern" name="test_pattern_filter_pipe" time="0.000" /><testcase classname="tests.test_catalog" name="test_catalog_register" time="0.000" /><testcase classname="tests.test_catalog" name="test_catalog_info" time="0.000" /><testcase classname="tests.utils.test_dataset" name="test_dataset" time="0.003"><failure message="RuntimeError: Failed to load item after 0 retries">dataset = MyDataset(queue_fn=&lt;function MyDataset.gatherer at 0x14ae7ddb49a0&gt;)
+
+    def test_dataset(dataset):
+        from typing import Iterable, Mapping
+    
+        # Manifest
+        assert isinstance(dataset.manifest, Iterable)
+    
+        mfst = dict(dataset.manifest)
+    
+        assert len(mfst["items"]) == 2
+        assert isinstance(mfst, Mapping)
+        assert isinstance(mfst["items"], Iterable)
+        assert mfst["items"] == [{"id": 1}, {"id": 2}]
+    
+        # Queue
+        assert isinstance(dataset.queue, Iterable)
+    
+        # Datapipe
+        assert isinstance(dataset.datapipe, Iterable)
+&gt;       assert list(dict(dataset.datapipe).values()) == [{"id": 1, "name": "Foo"}, {"id": 2, "name": "Bar"}]
+
+tests/utils/test_dataset.py:52: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = &lt;unicore.utils.dataset._Datapipe object at 0x14ae7e047190&gt;
+
+    def __iter__(self) -&gt; T.Iterable[_T_DITEM]:
+        queue = iter(self._queue)
+        while True:
+            for _ in range(self._retry + 1):
+                try:
+                    key, item = next(queue)
+                    yield self._load_fn(key, item, self._info)
+                    break
+                except StopIteration:
+                    return
+                except Exception as e:
+                    key = "UNKNOWN"
+                    warnings.warn(f"Error loading item: {e}", stacklevel=2)
+            else:
+&gt;               raise RuntimeError(f"Failed to load item after {self._retry} retries")
+E               RuntimeError: Failed to load item after 0 retries
+
+sources/unicore/utils/dataset.py:343: RuntimeError</failure></testcase><testcase classname="tests.utils.test_dataserial" name="test_dataclass_serialize_json[True-True]" time="0.003" /><testcase classname="tests.utils.test_dataserial" name="test_dataclass_serialize_json[True-False]" time="0.003" /><testcase classname="tests.utils.test_dataserial" name="test_dataclass_serialize_json[False-True]" time="0.003" /><testcase classname="tests.utils.test_dataserial" name="test_dataclass_serialize_json[False-False]" time="0.002" /><testcase classname="tests.utils.test_dataserial" name="test_dataclass_serialize_registry" time="0.001" /><testcase classname="tests.utils.test_pickle" name="test_as_picklable[&lt;lambda&gt;-1004-False]" time="0.001" /><testcase classname="tests.utils.test_descriptors" name="test_immutable" time="0.000" /><testcase classname="tests.utils.test_dataserial" name="test_dataclass_serialize_registry_decorator" time="0.001" /></testsuite></testsuites>

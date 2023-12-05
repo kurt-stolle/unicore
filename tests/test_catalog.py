@@ -8,25 +8,25 @@ def catalog():
     return DataManager()
 
 
-def test_canonicalize_id():
-    from unicore.catalog import canonicalize_id
+def test_parse_key(catalog):
+    canon = catalog.parse_key
 
-    assert canonicalize_id("foo") == "foo"
-    assert canonicalize_id("Foo") == "foo"
-    assert canonicalize_id("FooBar") == "foo-bar"
-    assert canonicalize_id("FooBar/Baz") == "foo-bar/baz"
-    assert canonicalize_id("foo_bar") == "foo-bar"
-    assert canonicalize_id("foo_bar_baz") == "foo-bar-baz"
-    assert canonicalize_id("foo-bar") == "foo-bar"
-    assert canonicalize_id("foo-bar-baz") == "foo-bar-baz"
-    assert canonicalize_id("foo-bar_baz") == "foo-bar-baz"
-    assert canonicalize_id("foo_bar/baz") == "foo-bar/baz"
-    assert canonicalize_id("foo/360") == "foo/360"
-    assert canonicalize_id("foo/360-bar") == "foo/360-bar"
+    assert canon("foo") == "foo"
+    assert canon("Foo") == "foo"
+    assert canon("FooBar") == "foobar"
+
+
+def test_split_query(catalog):
+    split = catalog.split_query
+
+    assert split("foo") == ("foo", [])
+    assert split("foo-bar") == ("foo-bar", [])
+    assert split("foo-bar/baz") == ("foo-bar", ["baz"])
+    assert split("foo-bar/baz/qux") == ("foo-bar", ["baz/qux"])
 
 
 def test_catalog_register(catalog):
-    @catalog.register_dataset()
+    @catalog.register_dataset(info=lambda: {"abc": 1})
     class FooData:
         test_value = "foo"
 
@@ -34,22 +34,23 @@ def test_catalog_register(catalog):
         def info(id_: str):
             return {"test_info": "bar"}
 
-    assert catalog.get_dataset("foo_data").test_value == "foo"
+    assert catalog.get_dataset("foodata").test_value == "foo"
 
     with pytest.raises(KeyError):
-        catalog.register_dataset("foo_data")(FooData)
+        catalog.register_dataset("foodata")(FooData)
 
 
 def test_catalog_info(catalog):
-    @catalog.register_info("foo-data")
-    def _():
-        return {"test_info": "bar"}
+    @catalog.register_info("foodata")
+    def _(variant):
+        return {"test_info": variant}
 
-    info = catalog.get_info("foo-data")
-
+    info = catalog.get_info("foodata/bar")
     assert info["test_info"] == "bar"
+    info = catalog.get_info("foodata/baz")
+    assert info["test_info"] == "baz"
 
     with pytest.raises(KeyError):
-        catalog.get_info("bar_data")
+        catalog.get_info("bardata")
         nonexists = info["test_value"]
         assert nonexists is None

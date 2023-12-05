@@ -60,7 +60,7 @@ def assert_status(
     attr: _StatusAttrType, status: int, on_exit: bool = False
 ) -> T.Callable[[_StatusDecoFuncType], _StatusDecoFuncType]:
     """
-    Decorator that marks a method as only callable when the trainer is in a certain status.
+    Decorator that marks a method as only callable when the engine is in a certain status.
 
     Parameters
     ----------
