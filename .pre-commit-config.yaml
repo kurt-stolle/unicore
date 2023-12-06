@@ -14,7 +14,6 @@ repos:
       - id: debug-statements
       - id: end-of-file-fixer
       - id: mixed-line-ending
-      - id: requirements-txt-fixer
       - id: trailing-whitespace
 
   - repo: https://github.com/PyCQA/isort
@@ -27,7 +26,7 @@ repos:
     rev: v2.31.0
     hooks:
       - id: pyupgrade
-        args: [--py37-plus]
+        args: [--py311-plus]
 
   - repo: https://github.com/hadialqattan/pycln
     rev: v1.2.5
