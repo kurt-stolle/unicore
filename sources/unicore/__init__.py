@@ -1,3 +1,5 @@
-# from . import catalog, file_io, datapipes
+"""
+UniCore implements stable libraries for ML research.
+"""
 
-__version__ = "1.2.1"
+__version__ = "2.0.0"
