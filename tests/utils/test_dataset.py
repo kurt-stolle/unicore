@@ -7,13 +7,13 @@ from unicore.utils.frozendict import frozendict
 
 class MyDataset(Dataset, info=lambda: {"name": "FooBar"}):
     @override
-    def _load_data(self, it, info):
-        if it["id"] == 1:
-            return it | {"name": "Foo"}
-        elif it["id"] == 2:
-            return it | {"name": "Bar"}
+    def _load_data(self, id, item, info):
+        if item["id"] == 1:
+            return item | {"name": "Foo"}
+        elif item["id"] == 2:
+            return item | {"name": "Bar"}
         else:
-            return it | {"name": "Baz"}
+            return item | {"name": "Baz"}
 
     @override
     def _build_manifest(self):
@@ -49,4 +49,4 @@ def test_dataset(dataset):
 
     # Datapipe
     assert isinstance(dataset.datapipe, Iterable)
-    assert list(dict(dataset.datapipe).values()) == [{"id": 1, "name": "Foo"}, {"id": 2, "name": "Bar"}]
+    assert list(dataset.datapipe) == [{"id": 1, "name": "Foo"}, {"id": 2, "name": "Bar"}]

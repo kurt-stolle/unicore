@@ -12,7 +12,7 @@ _P = T.ParamSpec("_P")
 _R_co = T.TypeVar("_R_co", covariant=True)
 _S = T.TypeVar("_S", bound=E.IntFlag, contravariant=True)
 _StatusDecoFuncType: T.TypeAlias = T.Callable[T.Concatenate[_O_contra, _P], _R_co]
-_StatusAttrType: T.TypeAlias = str | property | "StatusDescriptor"
+_StatusAttrType: T.TypeAlias = str | property | T.Any
 
 
 def _get_error_bad_attr(attr: T.Any) -> TypeError:

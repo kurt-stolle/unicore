@@ -14,6 +14,7 @@ __all__ = ["DataManager"]
 
 
 _DEFAULT_ID_PATTERN: T.Final[re.Pattern] = re.compile(r"^[a-z\d\-]+$")
+_DEFAULT_ID_SEPARATOR: T.Final[str] = "/"
 
 _D_co = T.TypeVar("_D_co", covariant=True)
 _I_co = T.TypeVar("_I_co", covariant=True)
@@ -28,14 +29,11 @@ class DataManager(T.Generic[_D_co, _I_co]):
 
     __slots__ = ("name", "variant_separator", "id_pattern", "base", "__info__", "__data__")
 
-    __info__: Registry[T.Callable[..., _I_co], str]
-    __data__: Registry[type[_D_co], str]
-
     def __init__(
         self,
         *,
-        id_pattern: re.Pattern = _DEFAULT_ID_PATTERN,
-        variant_separator: str = "/",
+        id_pattern: re.Pattern[str] = _DEFAULT_ID_PATTERN,
+        variant_separator: str = _DEFAULT_ID_SEPARATOR,
     ):
         """
         Parameters
@@ -45,10 +43,10 @@ class DataManager(T.Generic[_D_co, _I_co]):
         variant_separator : str
             The separator to use for separating dataset IDs from variant IDs.
         """
-        self.variant_separator: T.Final = variant_separator
-        self.id_pattern: T.Final = id_pattern
-        self.__info__ = Registry(self.parse_key)
-        self.__data__ = Registry(self.parse_key)
+        self.variant_separator: T.Final[str] = variant_separator
+        self.id_pattern: T.Final[re.Pattern[str]] = id_pattern
+        self.__info__ = T.cast(Registry[T.Callable[..., _I_co], str], Registry(self.parse_key))
+        self.__data__ = T.cast(Registry[type[_D_co], str], Registry(self.parse_key))
 
     def parse_key(self, key: str | type[_D_co], *, check_valid: bool = True) -> str:
         """

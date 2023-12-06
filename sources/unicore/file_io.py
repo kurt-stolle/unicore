@@ -155,7 +155,11 @@ class WandBArtifactHandler(PathHandler):
 
         if force or path not in self.cache_map or not os.path.exists(self.cache_map[path]):
             name, file = self._parse_path(path)
-            artifact = self._get_artifact(name)
+
+            try:
+                artifact = self._get_artifact(name)
+            except wandb.errors.CommError as e:
+                raise FileNotFoundError(f"Could not find artifact {name!r}") from e
 
             path = _manager.get_local_path(f"//cache/wandb-artifact/{name}")
             with file_lock(path):

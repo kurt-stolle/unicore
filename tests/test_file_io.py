@@ -1,9 +1,26 @@
 import os
+from multiprocessing import RLock
 from pathlib import Path
 
+import pytest
 import wandb
 
 from unicore import file_io
+
+WANDB_LOCK = RLock()
+
+
+@pytest.fixture()
+def wandb_run(tmp_path):
+    os.environ["WANDB_MODE"] = "dryrun"
+    os.environ["WANDB_DIR"] = str(tmp_path)
+    os.environ["WANDB_API_KEY"] = "test"
+
+    with WANDB_LOCK:
+        if wandb.run is None:
+            wandb.init(project="test", entity="test")
+    yield wandb.run
+    # wandb.finish()
 
 
 def test_file_io_globals():
@@ -22,7 +39,15 @@ def test_file_io_environ():
     assert path == str(Path(os.environ.get("UNICORE_OUTPUT", "output")).resolve())
 
 
-def test_wandb_artifact():
-    wandb.use_artifact(
-        "wandb-artifact:///tue-mps/multidvps/run-multidvps-cityscapes-resnet50-2023-12-05T10-05-52-step-5000:6225cf14e76d63ce43ea/model.safetensors"
-    )
+@pytest.mark.parametrize(
+    "path",
+    [
+        "wandb-artifact://test/artifact/name:version",
+        "wandb-artifact://test/artifact/name:version/",
+        "wandb-artifact://test/artifact/name:version/path/to/file",
+        "wandb-artifact:///test/artifact/name:version/path/to/file",
+    ],
+)
+def test_wandb_artifact(wandb_run, path):
+    with pytest.raises(FileNotFoundError):
+        file_io.get_local_path(path)
