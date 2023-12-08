@@ -2,11 +2,7 @@ from dataclasses import dataclass
 
 import pytest
 
-from unicore.utils.dataserial import (
-    SerializeRegistry,
-    serializable,
-    serializable_base,
-)
+from unicore.utils.dataserial import SerializeRegistry, serializable, serializable_base
 
 
 @pytest.mark.parametrize("kw_only", [True, False])

@@ -1,4 +1,4 @@
-.PHONY: build, benchmark, clean, coverage, dist
+.PHONY: benchmark, clean, coverage 
 
 build:
 	python -m build

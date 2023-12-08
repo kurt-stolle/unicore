@@ -1,13 +1,4 @@
-from typing import (
-    Any,
-    Callable,
-    Generic,
-    Iterable,
-    Iterator,
-    Sequence,
-    TypeVar,
-    cast,
-)
+from typing import Any, Callable, Generic, Iterable, Iterator, Sequence, TypeVar, cast
 
 from torchdata.datapipes import functional_datapipe
 from torchdata.datapipes.iter import IterDataPipe

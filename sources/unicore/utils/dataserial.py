@@ -1,14 +1,6 @@
 import json
 from dataclasses import asdict, fields, is_dataclass
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Protocol,
-    Self,
-    Sequence,
-    TypeVar,
-    dataclass_transform,
-)
+from typing import TYPE_CHECKING, Any, Protocol, Self, Sequence, TypeVar, dataclass_transform
 
 import cloudpickle
 from typing_extensions import override

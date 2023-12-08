@@ -2,11 +2,7 @@ from pathlib import Path
 
 from torchdata.datapipes import iter, map
 
-from unicore.datapipes.io_wrap import (
-    UniCoreFileLister,
-    UniCoreFileOpener,
-    UniCoreSaver,
-)
+from unicore.datapipes.io_wrap import UniCoreFileLister, UniCoreFileOpener, UniCoreSaver
 
 
 def test_file_lister_pipe():

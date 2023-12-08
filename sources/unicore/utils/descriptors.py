@@ -2,19 +2,7 @@ from __future__ import annotations
 
 from functools import update_wrapper
 from types import MethodType
-from typing import (
-    Any,
-    Callable,
-    Concatenate,
-    Final,
-    Generic,
-    NoReturn,
-    Optional,
-    ParamSpec,
-    TypeVar,
-    cast,
-    overload,
-)
+from typing import Any, Callable, Concatenate, Final, Generic, NoReturn, Optional, ParamSpec, TypeVar, cast, overload
 
 from typing_extensions import override
 
