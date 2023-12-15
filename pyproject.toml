@@ -29,7 +29,6 @@ dependencies = [
     "iopath",
     "tensordict",
     "wandb",
-    "webdav3",
 ]
 dynamic = ["version"]
 
