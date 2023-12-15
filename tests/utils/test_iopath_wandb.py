@@ -2,8 +2,8 @@ import os
 from multiprocessing import RLock
 
 import pytest
-import wandb
 
+import wandb
 from unicore import file_io
 
 WANDB_LOCK = RLock()

@@ -8,17 +8,13 @@ import functools
 import os
 import typing as T
 import warnings
-from pathlib import Path as _PathlibPath
-from urllib.parse import ParseResult, urlparse
 
 import typing_extensions as TX
-from iopath import file_lock
 from iopath.common.file_io import HTTPURLHandler, OneDrivePathHandler, PathHandler, PathManager, PathManagerFactory
 
 from unicore.utils.iopath_environ import EnvironPathHandler
 from unicore.utils.iopath_path import IoPath
 from unicore.utils.iopath_wandb import WandBArtifactHandler
-from unicore.utils.iopath_webdav import WebDAVPathHandler
 
 if T.TYPE_CHECKING:
     from wandb import Artifact as WandBArtifact
@@ -128,10 +124,10 @@ def __dir__():
 
 if T.TYPE_CHECKING:
 
-    def opent(path: str, mode: str = "r", buffering: int = 32, **kwargs: Any) -> Iterable[Any]:
+    def opent(path: str, mode: str = "r", buffering: int = 32, **kwargs: T.Any) -> T.Iterable[T.Any]:
         ...
 
-    def open(path: str, mode: str = "r", buffering: int = -1, **kwargs: Any) -> Union[IO[str], IO[bytes]]:
+    def open(path: str, mode: str = "r", buffering: int = -1, **kwargs: T.Any) -> T.Union[IO[str], T.IO[bytes]]:
         ...
 
     def opena(
@@ -139,51 +135,51 @@ if T.TYPE_CHECKING:
         path: str,
         mode: str = "r",
         buffering: int = -1,
-        callback_after_file_close: Optional[Callable[[None], None]] = None,
-        **kwargs: Any,
-    ) -> Union[IO[str], IO[bytes]]:
+        callback_after_file_close: T.Optional[T.Callable[[None], None]] = None,
+        **kwargs: T.Any,
+    ) -> T.IO[str] | T.IO[bytes]:
         ...
 
-    def async_join(*paths: str, **kwargs: Any) -> bool:
+    def async_join(*paths: str, **kwargs: T.Any) -> bool:
         ...
 
-    def async_close(**kwargs: Any) -> bool:
+    def async_close(**kwargs: T.Any) -> bool:
         ...
 
-    def copy(src_path: str, dst_path: str, overwrite: bool = False, **kwargs: Any) -> bool:
+    def copy(src_path: str, dst_path: str, overwrite: bool = False, **kwargs: T.Any) -> bool:
         ...
 
-    def mv(src_path: str, dst_path: str, **kwargs: Any) -> bool:
+    def mv(src_path: str, dst_path: str, **kwargs: T.Any) -> bool:
         ...
 
-    def get_local_path(path: str, force: bool = False, **kwargs: Any) -> str:
+    def get_local_path(path: str, force: bool = False, **kwargs: T.Any) -> str:
         ...
 
-    def copy_from_local(local_path: str, dst_path: str, overwrite: bool = False, **kwargs: Any) -> None:
+    def copy_from_local(local_path: str, dst_path: str, overwrite: bool = False, **kwargs: T.Any) -> None:
         ...
 
-    def exists(path: str, **kwargs: Any) -> bool:
+    def exists(path: str, **kwargs: T.Any) -> bool:
         ...
 
-    def isfile(path: str, **kwargs: Any) -> bool:
+    def isfile(path: str, **kwargs: T.Any) -> bool:
         ...
 
-    def isdir(path: str, **kwargs: Any) -> bool:
+    def isdir(path: str, **kwargs: T.Any) -> bool:
         ...
 
-    def ls(path: str, **kwargs: Any) -> list[str]:
+    def ls(path: str, **kwargs: T.Any) -> list[str]:
         ...
 
-    def mkdirs(path: str, **kwargs: Any) -> None:
+    def mkdirs(path: str, **kwargs: T.Any) -> None:
         ...
 
-    def rm(path: str, **kwargs: Any) -> None:
+    def rm(path: str, **kwargs: T.Any) -> None:
         ...
 
-    def symlink(src_path: str, dst_path: str, **kwargs: Any) -> bool:
+    def symlink(src_path: str, dst_path: str, **kwargs: T.Any) -> bool:
         ...
 
-    def set_cwd(path: Union[str, None], **kwargs: Any) -> bool:
+    def set_cwd(path: T.Optional[str], **kwargs: T.Any) -> bool:
         ...
 
     def register_handler(handler: PathHandler, allow_override: bool = True) -> None:
